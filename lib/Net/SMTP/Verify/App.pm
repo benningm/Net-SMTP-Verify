@@ -33,6 +33,11 @@ has '+tlsa' => (
   cmd_aliases => 'a',
   documentation => 'lookup if TLSA record is available',
 );
+has '+openpgpkey' => (
+  traits => [ 'Getopt' ],
+  cmd_aliases => 'o',
+  documentation => 'lookup if OPENPGPKEY records are available',
+);
 has '+debug' => (
   traits => [ 'Getopt' ],
   cmd_aliases => 'd',

@@ -11,6 +11,7 @@ use Net::DNS::Resolver;
 use Net::SMTP;
 use Net::Cmd qw( CMD_OK );
 use Sys::Hostname;
+use Digest::SHA qw(sha224_hex);
 
 =head1 DESCRIPTION
 
@@ -111,6 +112,10 @@ The dnssec and adflag is required for the TLSA check.
 
 Set to 1 to activate TLSA lookup.
 
+=head2 openpgpkey (default: 0)
+
+Set to 1 to activate OPENPGPKEY lookup.
+
 =head2 logging_callback (default: sub {})
 
 Set a callback to retrieve log messages.
@@ -142,6 +147,7 @@ has 'resolver' => (
 );
 
 has 'tlsa' => ( is => 'rw', isa => 'Bool', default => 0 );
+has 'openpgpkey' => ( is => 'rw', isa => 'Bool', default => 0 );
 
 has 'logging_callback' => (
   is => 'rw', isa => 'CodeRef', lazy => 1,
@@ -203,7 +209,8 @@ sub resolve {
     $self->log('looking up MX for '.$domain.'...');
     my $reply = $self->resolver->query( $domain, 'MX' );
     if( $reply->answer ) {
-      my @mx = sort { $a->preference <=> $b->preference } $reply->answer;
+      my @mx = grep { $_->type eq 'MX' } $reply->answer;
+      @mx = sort { $a->preference <=> $b->preference } @mx;
       my @known_hosts = grep { $self->_is_known_host($_->exchange) } @mx;
 
       my $ex;
@@ -257,6 +264,29 @@ sub check_tlsa {
   }
 
   return 1;
+}
+
+sub check_openpgpkey {
+  my ( $self, $rs, @rcpts ) = @_;
+
+  foreach my $rcpt ( @rcpts ) {
+    my ( $local, $domain ) = split('@', $rcpt, 2);
+    my $name = join('.', sha224_hex($local), '_openpgpkey', $domain);
+    $self->log('looking up OPENPGPKEY: '.$name.'...');
+    my $reply = $self->resolver->send( $name, 'TYPE61' );
+    if( ! $reply->header->ad ) {
+      $self->log('no adflag set in response');
+      $rs->set( $rcpt, 'has_openpgpkey', 0 );
+    } elsif( ! $reply->answer ) {
+      $self->log('no OPENPGPKEY record found');
+      $rs->set( $rcpt, 'has_openpgpkey', 0 );
+    } else {
+      $self->log('OPENPGPKEY record found');
+      $rs->set( $rcpt, 'has_openpgpkey', 1 );
+    }
+  }
+
+  return;
 }
 
 sub check_smtp {
@@ -395,6 +425,10 @@ sub check {
         'has_tlsa', $self->check_tlsa( $host ) );
     }
     $self->check_smtp( $rs, $host, $size, $sender, @{$by_host->{$host}} );
+  }
+
+  if( $self->openpgpkey ) {
+    $self->check_openpgpkey( $rs, @rcpts );
   }
 
   return $rs;

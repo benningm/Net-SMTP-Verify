@@ -32,6 +32,12 @@ It will check a TLSA for the MX has been published.
 
 This also requires that your resolver sets the 'ad' flag.
 
+=item check for OPENPGPKEY record of recipients
+
+It will check a OPENPGPKEY for the recipient address has been published.
+
+This also requires that your resolver sets the 'ad' flag.
+
 =back
 
 If the server provides the PIPELINING extension smtp-verify
@@ -46,6 +52,8 @@ will send RCPT commands in bulks.
    -p INT --port INT              port to use (default 25)
    -t INT --timeout INT           smtp timeout (default 30s)
    -a --tlsa                      lookup if TLSA record is available
+   -o --openpgpkey                lookup if OPENPGPKEY records are
+                                  available
    -d --debug                     print debug info to STDERR
    -b INT --rcpt_bulk_size INT    how many RCPTs to send in one bulk
                                   when PIPELINING (default 10)

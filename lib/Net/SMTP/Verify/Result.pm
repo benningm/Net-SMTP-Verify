@@ -16,6 +16,7 @@ A result class for Net::SMTP::Verify recipient checks.
     host => 'mx.domain.de',
     has_starttls => 1,
     has_tlsa => 1,
+    has_openpgpkey => 1,
     smtp_code => 250,
     smtp_message => '2.1.5 Ok',
   );
@@ -40,6 +41,10 @@ If STARTTLS is available.
 
 If a TLSA record for the host exists.
 
+=head2 has_openpgpkey
+
+If a OPENPGPKEY record for the address exists.
+
 =head2 smtp_code
 
 The SMTP code returned.
@@ -59,6 +64,7 @@ has 'host' => ( is => 'rw', isa => 'Maybe[Str]' );
 
 has 'has_starttls' => ( is => 'rw', isa => 'Maybe[Bool]' );
 has 'has_tlsa' => ( is => 'rw', isa => 'Maybe[Bool]' );
+has 'has_openpgpkey' => ( is => 'rw', isa => 'Maybe[Bool]' );
 
 has 'smtp_message' => ( is => 'rw', isa => 'Maybe[Str]' );
 has 'smtp_code' => ( is => 'rw', isa => 'Maybe[Int]' );
