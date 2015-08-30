@@ -12,6 +12,116 @@ use Net::SMTP;
 use Net::Cmd qw( CMD_OK );
 use Sys::Hostname;
 
+=head1 DESCRIPTION
+
+This class implements checks for verifying SMTP addresses.
+
+It implements the following checks:
+
+=over
+
+=item check addresses with SMTP MAIL FROM and RCPT TO commands
+
+Check if the MX would accept mail for test addresses.
+
+=item check of message size
+
+If the mail exchanger (MX) supports the SIZE extension and a size is given the
+module will pass the message size with the MAIL FROM command.
+
+This will check if the message would exceed message size limits or recipients
+quotas on the target MX.
+
+=item check if MX could handle TLS connections
+
+It will check if the STARTTLS extension required to enstablish encrypted TLS
+connections is supported by the target MX.
+
+=item check if TLSA record is available
+
+The module could check if a TLSA record has been published for the target MX
+server.
+
+If such a record has been published the target MX SSL certificate could be
+verified with DANE.
+
+=back
+
+=head1 SYNOPSIS
+
+  use Net::SMTP::Verify;
+
+  my $v = Net::SMTP::Verify->new;
+  my $resultset = $v->check(
+    100000, # size
+    'karl@senderdomain.de', # sender
+    'rcpt1@rcptdomain.de', # 1 or more recipients...
+    'rcpt2@rcptdomain.de', 
+    'rcpt3@rcptdomain.de',
+  );
+
+  # check overall status
+  $resultset->is_all_success;
+
+  # check a single result
+  $resultset->rcpt('rcpt1@rcptdomain.de')->is_success;
+  $resultset->rcpt('rcpt1@rcptdomain.de')->smtp_code;
+  $resultset->rcpt('rcpt1@rcptdomain.de')->smtp_message;
+  $resultset->rcpt('rcpt1@rcptdomain.de')->has_starttls;
+  $resultset->rcpt('rcpt1@rcptdomain.de')->has_tlsa;
+
+  # more ways to retrieve results by status...
+  $resultset->successfull_rcpts;
+  $resultset->error_rcpts;
+  $resultset->temp_error_rcpts;
+  $resultset->perm_error_rcpts;
+
+=head1 ATTRIBUTES
+
+=head2 host (default: undef)
+
+Query this smtp server instead of the MX records.
+
+=head2 port (default: 25)
+
+Use a different port.
+
+=head2 helo_name (default: hostname() )
+
+Use a helo_name other than the hostname of the system.
+
+=head2 timeout (default: 30)
+
+Use this timeout for the SMTP connection.
+
+=head2 resolver (default: system resolver)
+
+Use a custom Net::DNS::Resolver object.
+
+The default is:
+
+  Net::DNS::Resolver->new(
+    dnssec => 1,
+    adflag => 1,
+  );
+
+The dnssec and adflag is required for the TLSA check.
+
+=head2 tlsa (default: 0)
+
+Set to 1 to activate TLSA lookup.
+
+=head2 logging_callback (default: sub {})
+
+Set a callback to retrieve log messages.
+
+=head2 debug (default: 0)
+
+If set to 1 it will set a logging_callback method to output
+logs to STDERR.
+
+=cut
+
 has 'host' => ( is => 'ro', isa => 'Maybe[Str]' );
 has 'port' => ( is => 'ro', isa => 'Int', default => 25 );
 
@@ -71,8 +181,21 @@ sub _is_known_host {
   return 0;
 }
 
+=head1 METHODS
+
+=head2 resolve( $domain )
+
+Tries to resolve a MX to an hostname.
+
+It will choose the first record with the highest priority listed as MX.
+
+When a host is MX for multiple domains it will try to reuse the same
+host for checks.
+
+=cut
+
 sub resolve {
-  my ( $self, $domain, $known ) = @_;
+  my ( $self, $domain ) = @_;
 
   if( defined $self->host ) {
     return $self->host;
@@ -107,6 +230,12 @@ sub resolve {
   die('unknown mode: '.$self->mode);
   return;
 }
+
+=head2 check_tlsa( $host, $port )
+
+Check if a TLSA record is available.
+
+=cut
 
 sub check_tlsa {
   my ( $self, $host, $port ) = @_;
@@ -225,6 +354,12 @@ sub check_smtp_addresses_pipelining {
   }
   return;
 }
+
+=head2 check( $size, $sender, $rcpt1, $rcpts...)
+
+Performs check and returns a Net::SMTP::Verify::ResultSet.
+
+=cut
 
 sub check {
   my ( $self, $size, $sender, @rcpts ) = @_;
