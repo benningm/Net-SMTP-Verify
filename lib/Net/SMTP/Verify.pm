@@ -127,17 +127,17 @@ logs to STDERR.
 
 =cut
 
-has 'host' => ( is => 'ro', isa => 'Maybe[Str]' );
-has 'port' => ( is => 'ro', isa => 'Int', default => 25 );
+has 'host' => ( is => 'rw', isa => 'Maybe[Str]' );
+has 'port' => ( is => 'rw', isa => 'Int', default => 25 );
 
 has 'helo_name' => (
-  is => 'ro', isa => 'Str', lazy => 1,
+  is => 'rw', isa => 'Str', lazy => 1,
   default => sub { Sys::Hostname::hostname },
 );
 has 'timeout' => ( is => 'rw', isa => 'Int', default => 30 );
 
 has 'resolver' => (
-  is => 'ro', isa => 'Net::DNS::Resolver', lazy => 1,
+  is => 'rw', isa => 'Net::DNS::Resolver', lazy => 1,
   default => sub {
     Net::DNS::Resolver->new(
       dnssec => 1,
@@ -294,6 +294,7 @@ sub check_smtp {
 
   $self->log('connecting to '.$host.'...');
   my $smtp = Net::SMTP->new( $host,
+    Port => $self->port,
     Hello => $self->helo_name,
     Timeout => $self->timeout,
   );
