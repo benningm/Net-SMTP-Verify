@@ -292,7 +292,7 @@ sub check_openpgpkey {
 sub check_smtp {
   my ( $self, $rs, $host, $size, $sender, @rcpts ) = @_;
 
-  $self->log('connecting to '.$host.'...');
+  $self->log('connecting to '.$host.' on port '.$self->port.'...');
   my $smtp = Net::SMTP->new( $host,
     Port => $self->port,
     Hello => $self->helo_name,
