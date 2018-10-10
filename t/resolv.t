@@ -10,4 +10,4 @@ my $v = Net::SMTP::Verify->new;
 
 isa_ok( $v, 'Net::SMTP::Verify');
 
-cmp_ok( $v->resolve('markusbenning.de'), 'eq', 'affenschaukel.bofh-noc.de', 'lookup markusbenning.de' );
+cmp_ok( $v->resolve('markusbenning.de'), 'eq', 'sternschnuppe.bofh-noc.de', 'lookup markusbenning.de' );
